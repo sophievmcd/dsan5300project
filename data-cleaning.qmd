@@ -1,0 +1,52 @@
+---
+title: "data-cleaning"
+format: html
+---
+
+
+Using waves 2-7, only variables that are in all of them
+
+```{r}
+data <- readRDS("raw_data/Trends_VS_1981_2022_rds_v4_0.rds")
+```
+
+
+```{r}
+library(dplyr)
+library(haven)
+
+data$S002 <- zap_labels(data$s002)
+
+cleaned_data <- data %>%
+  filter(as.numeric(s002) != 1)
+```
+
+## Figuring out which columns are not present in the waves
+```{r}
+library(tidyr)
+library(purrr)
+
+waves <- 2:7
+
+na_cols_by_wave <- map(waves, function(wave) {
+  data %>%
+    filter(s002 == wave) %>%
+    summarise(across(everything(), ~all(is.na(.)))) %>%
+    pivot_longer(everything(), names_to = "column", values_to = "all_na") %>%
+    filter(all_na == TRUE) %>%
+    pull(column)
+}) %>%
+  set_names(paste0("Wave_", waves))
+
+na_cols_by_wave
+```
+
+## Removing columns from data
+```{r}
+cols_to_remove <- unique(unlist(na_cols_by_wave))
+data_cleaned <- data %>%
+  select(-all_of(cols_to_remove))
+
+```
+
+
